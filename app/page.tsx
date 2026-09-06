@@ -1,31 +1,38 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
+import { getCurrentUser } from "@/lib/auth";
 
-export default function Home() {
-  const [count, setCount] = useState(0);
+const primaryLinkClass =
+  "rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background outline-none hover:opacity-90 focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+
+const secondaryLinkClass =
+  "rounded-md border border-border px-4 py-2 text-sm font-medium outline-none hover:bg-surface focus-visible:ring-2 focus-visible:ring-accent";
+
+export default async function Home() {
+  const user = await getCurrentUser();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-6">
-      <h1 className="text-3xl font-semibold">Hello World</h1>
-      <div className="flex items-center gap-4">
-        <button
-          onClick={() => setCount((c) => c - 1)}
-          className="h-10 w-10 rounded-full border border-foreground/20 text-xl leading-none hover:bg-foreground/10"
-          aria-label="Decrement"
-        >
-          −
-        </button>
-        <span className="w-12 text-center text-2xl font-mono tabular-nums">
-          {count}
-        </span>
-        <button
-          onClick={() => setCount((c) => c + 1)}
-          className="h-10 w-10 rounded-full border border-foreground/20 text-xl leading-none hover:bg-foreground/10"
-          aria-label="Increment"
-        >
-          +
-        </button>
+    <div className="mx-auto w-full max-w-3xl px-6 py-16">
+      <h1 className="text-3xl font-semibold tracking-tight">NextNotes</h1>
+      <p className="mt-3 text-muted">
+        Write rich-text notes, and share any of them with a public link.
+      </p>
+
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        {user ? (
+          <Link href="/dashboard" className={primaryLinkClass}>
+            Go to dashboard
+          </Link>
+        ) : (
+          <>
+            <Link href="/authenticate?mode=signup" className={primaryLinkClass}>
+              Sign up
+            </Link>
+            <Link href="/authenticate" className={secondaryLinkClass}>
+              Log in
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );
