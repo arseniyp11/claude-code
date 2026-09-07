@@ -4,7 +4,13 @@ import Link from 'next/link';
 import { useActionState, useRef, useState, useSyncExternalStore } from 'react';
 
 import { setNoteSharingAction, type ShareNoteFormState } from '@/app/notes/[id]/actions';
-import { alertClass, fieldClass, hintClass, primaryButtonClass } from '@/components/form-styles';
+import {
+  alertClass,
+  fieldClass,
+  hintClass,
+  primaryButtonClass,
+  secondaryLinkClass,
+} from '@/components/form-styles';
 
 /**
  * Public sharing control (SPEC §3.3, §8.3).
@@ -65,6 +71,11 @@ export function ShareToggle({ noteId, isPublic, publicSlug }: ShareToggleProps) 
 
   const urlRef = useRef<HTMLInputElement>(null);
 
+  // Enabling sharing is confirmed behind this dialog (SPEC §11: destructive/
+  // exposing actions are confirmed); disabling isn't, since it only breaks a
+  // link rather than exposing anything.
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
   async function copyLink() {
     const input = urlRef.current;
     if (!input) return;
@@ -87,28 +98,92 @@ export function ShareToggle({ noteId, isPublic, publicSlug }: ShareToggleProps) 
         Sharing
       </h2>
 
-      {state.error && (
-        <p role='alert' className={`mt-3 ${alertClass}`}>
-          {state.error}
-        </p>
+      {isPublic ? (
+        <>
+          {state.error && (
+            <p role='alert' className={`mt-3 ${alertClass}`}>
+              {state.error}
+            </p>
+          )}
+
+          <form action={formAction} className='mt-3 flex flex-wrap items-center gap-3'>
+            {/* The action re-derives ownership from the session, so these only
+                say which note and which way — they never grant access to it. */}
+            <input type='hidden' name='id' value={noteId} />
+            <input type='hidden' name='isPublic' value='false' />
+
+            <button type='submit' disabled={pending} className={primaryButtonClass}>
+              {pending ? 'Saving…' : 'Stop sharing'}
+            </button>
+
+            <p className={hintClass}>
+              Anyone with the link below can read this note. They cannot edit or delete it.
+            </p>
+          </form>
+        </>
+      ) : (
+        <>
+          <div className='mt-3 flex flex-wrap items-center gap-3'>
+            <button
+              type='button'
+              className={primaryButtonClass}
+              onClick={() => dialogRef.current?.showModal()}
+            >
+              Share publicly
+            </button>
+
+            <p className={hintClass}>
+              This note is private. Sharing creates a link that anyone can open, without signing in.
+            </p>
+          </div>
+
+          <dialog
+            ref={dialogRef}
+            aria-labelledby='share-note-heading'
+            aria-describedby='share-note-description'
+            // `m-auto` restores the centering Tailwind's preflight strips: the
+            // UA centers a modal dialog with `margin: auto`, which the reset
+            // zeroes.
+            className='m-auto w-full max-w-sm rounded-lg border border-border bg-background p-6 text-foreground shadow-lg backdrop:bg-black/50'
+          >
+            <h2 id='share-note-heading' className='text-lg font-semibold'>
+              Share this note publicly?
+            </h2>
+
+            <p id='share-note-description' className='mt-2 text-sm text-muted'>
+              Anyone with the link will be able to read this note without signing in. They cannot
+              edit or delete it.
+            </p>
+
+            {state.error && (
+              <p role='alert' className={`mt-4 ${alertClass}`}>
+                {state.error}
+              </p>
+            )}
+
+            {/* Cancel is a plain button rather than <form method="dialog"> —
+                forms can't nest, and the confirm itself has to be a form so
+                the server action receives the note id. */}
+            <form action={formAction} className='mt-6 flex items-center gap-2'>
+              <input type='hidden' name='id' value={noteId} />
+              <input type='hidden' name='isPublic' value='true' />
+
+              <button type='submit' disabled={pending} className={primaryButtonClass}>
+                {pending ? 'Sharing…' : 'Share publicly'}
+              </button>
+
+              <button
+                type='button'
+                disabled={pending}
+                className={secondaryLinkClass}
+                onClick={() => dialogRef.current?.close()}
+              >
+                Cancel
+              </button>
+            </form>
+          </dialog>
+        </>
       )}
-
-      <form action={formAction} className='mt-3 flex flex-wrap items-center gap-3'>
-        {/* The action re-derives ownership from the session, so these only say
-            which note and which way — they never grant access to it. */}
-        <input type='hidden' name='id' value={noteId} />
-        <input type='hidden' name='isPublic' value={String(!isPublic)} />
-
-        <button type='submit' disabled={pending} className={primaryButtonClass}>
-          {pending ? 'Saving…' : isPublic ? 'Stop sharing' : 'Share publicly'}
-        </button>
-
-        <p className={hintClass}>
-          {isPublic
-            ? 'Anyone with the link below can read this note. They cannot edit or delete it.'
-            : 'This note is private. Sharing creates a link that anyone can open, without signing in.'}
-        </p>
-      </form>
 
       {isPublic && publicSlug && (
         <div className='mt-4 flex flex-col gap-2'>
