@@ -1,6 +1,33 @@
 Ralph progress log
 ===================
 
+2026-09-07 — Implement deleteNote function (category: database)
+
+Audited rather than re-implemented. lib/notes.ts:147-149's deleteNote()
+already covers every step: `DELETE FROM notes WHERE id = ? AND user_id = ?`
+enforces ownership in SQL, and the function returns void per SPEC.MD
+§6.2's literal signature (not the boolean the task's steps describe — SPEC
+is authoritative, as noted in prior rounds). test/lib/notes.test.ts's
+describe('deleteNote', ...) already covers: deleting an owned note,
+cross-user delete being a no-op (row survives, authorization enforced),
+and a nonexistent note resolving to undefined without throwing.
+
+Verified: bun run lint, bun run test (136 passed), bun run build (needed
+dangerouslyDisableSandbox — Turbopack/PostCSS worker port binding, same
+known sandbox interaction as prior rounds, not a code issue), and
+bun run test:e2e (2 passed) all green. No UI surface changed, so no
+Playwright MCP check.
+
+Next candidates: task 9 (setNotePublic + getNoteByPublicSlug) is also fully
+implemented in lib/notes.ts (COALESCE-based slug stability on re-share,
+is_public-scoped public lookup) and tested in test/lib/notes.test.ts — same
+confirm-and-mark pattern applies. That closes out the entire "database"
+category. After that, "auth" (lib/auth.ts, the API route, server helpers,
+auth-client.ts) is next in dependency order before UI tasks — all currently
+passes=false in prd.json despite lib/auth.ts, the auth API route, and
+lib/auth-client.ts appearing to already exist in the tree per earlier
+rounds' notes; worth a real audit rather than assuming.
+
 2026-09-07 — Implement updateNote function (category: database)
 
 Audited rather than re-implemented. lib/notes.ts:113-145's updateNote()
