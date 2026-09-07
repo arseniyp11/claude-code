@@ -1,11 +1,11 @@
 // The note repository closes over the SQLite handle; a client-component import
 // of this module should fail the build, not ship the query layer to a browser.
-import "server-only";
+import 'server-only';
 
-import { nanoid } from "nanoid";
+import { nanoid } from 'nanoid';
 
-import { get, query, run } from "./db";
-import { EMPTY_DOC } from "./tiptap";
+import { get, query, run } from './db';
+import { EMPTY_DOC } from './tiptap';
 
 /**
  * Note repository (SPEC §6.2).
@@ -41,10 +41,9 @@ type NoteRow = {
   updated_at: string;
 };
 
-const COLUMNS =
-  "id, user_id, title, content_json, is_public, public_slug, created_at, updated_at";
+const COLUMNS = 'id, user_id, title, content_json, is_public, public_slug, created_at, updated_at';
 
-export const DEFAULT_TITLE = "Untitled note";
+export const DEFAULT_TITLE = 'Untitled note';
 
 function toNote(row: NoteRow): Note {
   return {
@@ -83,19 +82,16 @@ export async function createNote(
 
   // RETURNING on a successful INSERT always yields the row; a miss means the
   // statement failed in a way SQLite didn't raise, which we'd rather not mask.
-  if (!row) throw new Error("Failed to create note");
+  if (!row) throw new Error('Failed to create note');
 
   return toNote(row);
 }
 
-export async function getNoteById(
-  userId: string,
-  noteId: string,
-): Promise<Note | null> {
-  const row = get<NoteRow>(
-    `SELECT ${COLUMNS} FROM notes WHERE id = ? AND user_id = ?`,
-    [noteId, userId],
-  );
+export async function getNoteById(userId: string, noteId: string): Promise<Note | null> {
+  const row = get<NoteRow>(`SELECT ${COLUMNS} FROM notes WHERE id = ? AND user_id = ?`, [
+    noteId,
+    userId,
+  ]);
 
   return row ? toNote(row) : null;
 }
@@ -120,12 +116,12 @@ export async function updateNote(
   const params: unknown[] = [];
 
   if (data.title !== undefined) {
-    assignments.push("title = ?");
+    assignments.push('title = ?');
     params.push(data.title);
   }
 
   if (data.contentJson !== undefined) {
-    assignments.push("content_json = ?");
+    assignments.push('content_json = ?');
     params.push(data.contentJson);
   }
 
@@ -134,7 +130,7 @@ export async function updateNote(
   assignments.push("updated_at = datetime('now')");
 
   const row = get<NoteRow>(
-    `UPDATE notes SET ${assignments.join(", ")}
+    `UPDATE notes SET ${assignments.join(', ')}
      WHERE id = ? AND user_id = ?
      RETURNING ${COLUMNS}`,
     [...params, noteId, userId],
@@ -144,7 +140,7 @@ export async function updateNote(
 }
 
 export async function deleteNote(userId: string, noteId: string): Promise<void> {
-  run("DELETE FROM notes WHERE id = ? AND user_id = ?", [noteId, userId]);
+  run('DELETE FROM notes WHERE id = ? AND user_id = ?', [noteId, userId]);
 }
 
 export async function setNotePublic(
@@ -184,10 +180,9 @@ export async function setNotePublic(
  * a note whose sharing was turned off is simply not found.
  */
 export async function getNoteByPublicSlug(slug: string): Promise<Note | null> {
-  const row = get<NoteRow>(
-    `SELECT ${COLUMNS} FROM notes WHERE public_slug = ? AND is_public = 1`,
-    [slug],
-  );
+  const row = get<NoteRow>(`SELECT ${COLUMNS} FROM notes WHERE public_slug = ? AND is_public = 1`, [
+    slug,
+  ]);
 
   return row ? toNote(row) : null;
 }

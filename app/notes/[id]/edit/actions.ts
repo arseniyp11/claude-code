@@ -1,12 +1,14 @@
-"use server";
+'use server';
 
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { z } from "zod";
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { z } from 'zod';
 
-import { getCurrentUser } from "@/lib/auth";
-import { DEFAULT_TITLE, updateNote } from "@/lib/notes";
-import { parseDocument } from "@/lib/tiptap";
+import { getCurrentUser } from '@/lib/auth';
+import { reportError, withReference } from '@/lib/errors';
+import { noteInputSchema } from '@/lib/note-input';
+import { updateNote } from '@/lib/notes';
+import { authenticateUrl } from '@/lib/redirects';
 
 export type EditNoteFormState = {
   /** Form-level message, shown above the fields. */
@@ -21,37 +23,22 @@ export type EditNoteFormState = {
   saved?: boolean;
 };
 
-// Same rules as the create action: the two forms feed the same columns, so a
-// title that's acceptable on one page has to be acceptable on the other.
-const schema = z.object({
-  title: z
-    .string()
-    .trim()
-    .max(200, { message: "Use at most 200 characters." })
-    .transform((value) => (value.length > 0 ? value : DEFAULT_TITLE)),
-
-  // The editor submits this through a hidden input, so it is user-controlled.
-  // Anything that isn't a TipTap document is rejected rather than stored.
-  contentJson: z.string().refine((value) => parseDocument(value) !== null, {
-    message: "The note content could not be read. Please try again.",
-  }),
-});
-
 export async function updateNoteAction(
   _prevState: EditNoteFormState,
   formData: FormData,
 ): Promise<EditNoteFormState> {
-  const id = String(formData.get("id") ?? "");
-  const title = String(formData.get("title") ?? "");
+  const id = String(formData.get('id') ?? '');
+  const title = String(formData.get('title') ?? '');
 
   // A page guard doesn't cover the actions that page renders — an action is a
   // separately addressable POST endpoint, so it re-checks the session itself.
   const user = await getCurrentUser();
-  if (!user) redirect(`/authenticate?next=/notes/${id}`);
+  // `id` is form-supplied, so it is encoded rather than interpolated raw.
+  if (!user) redirect(authenticateUrl(`/notes/${id}/edit`));
 
-  const parsed = schema.safeParse({
+  const parsed = noteInputSchema.safeParse({
     title,
-    contentJson: formData.get("contentJson"),
+    contentJson: formData.get('contentJson'),
   });
 
   if (!parsed.success) {
@@ -65,21 +52,34 @@ export async function updateNoteAction(
     };
   }
 
+  // Declared out here because the revalidation below needs the note's slug.
+  let note: Awaited<ReturnType<typeof updateNote>>;
+
   try {
     // Scoped by user_id in SQL, so someone else's note id updates nothing and
     // comes back null — the id in the form is never trusted on its own.
-    const note = await updateNote(user.id, id, parsed.data);
+    note = await updateNote(user.id, id, parsed.data);
 
     if (!note) {
-      return { error: "That note no longer exists.", title };
+      return { error: 'That note no longer exists.', title };
     }
   } catch (error) {
-    console.error("Failed to update note", error);
-    return { error: "Could not save the note. Please try again.", title };
+    // The real failure goes to the log; the visitor gets a reference id and
+    // nothing about the database.
+    const reference = reportError('Failed to update note', error);
+    return {
+      error: withReference('Could not save the note. Please try again.', reference),
+      title,
+    };
   }
 
-  revalidatePath("/dashboard");
+  revalidatePath('/dashboard');
   revalidatePath(`/notes/${id}`);
+  revalidatePath(`/notes/${id}/edit`);
+
+  // A shared note has a second, cacheable address; without this the public page
+  // would keep serving the pre-edit version to everyone holding the link.
+  if (note.publicSlug) revalidatePath(`/p/${note.publicSlug}`);
 
   return { saved: true, title: parsed.data.title };
 }

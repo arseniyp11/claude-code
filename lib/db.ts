@@ -1,6 +1,6 @@
-import { Database } from "bun:sqlite";
-import { mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { Database } from 'bun:sqlite';
+import { mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
 /**
  * SQLite access layer (SPEC §6.1).
@@ -25,19 +25,35 @@ import { dirname, resolve } from "node:path";
  *     console.log(JSON.stringify(getAuthTables(auth.options),null,2))'
  */
 
-const DB_PATH = resolve(process.cwd(), process.env.DB_PATH ?? "data/app.db");
+// `||`, not `??`: an empty or whitespace-only DB_PATH (a blank line in
+// .env.local) would otherwise resolve to the project root, and Bun would try to
+// open a directory as the database.
+const configuredPath = process.env.DB_PATH?.trim();
+const DB_PATH = resolve(process.cwd(), configuredPath || 'data/app.db');
 
 function createDb(): Database {
-  // The data directory is not checked into the repo.
-  mkdirSync(dirname(DB_PATH), { recursive: true });
+  let db: Database;
 
-  const db = new Database(DB_PATH, { create: true, strict: true });
+  try {
+    // The data directory is not checked into the repo.
+    mkdirSync(dirname(DB_PATH), { recursive: true });
 
-  db.run("PRAGMA journal_mode = WAL;");
+    db = new Database(DB_PATH, { create: true, strict: true });
+  } catch (error) {
+    // Names the resolved path, which is what makes a misconfigured DB_PATH
+    // diagnosable. This throws during server start-up, so it reaches the
+    // operator's log and never a browser.
+    throw new Error(
+      `Could not open the database at ${DB_PATH}. Check DB_PATH and that the path is writable.`,
+      { cause: error },
+    );
+  }
+
+  db.run('PRAGMA journal_mode = WAL;');
   // Off by default in SQLite; without it the notes.user_id foreign key is inert.
-  db.run("PRAGMA foreign_keys = ON;");
+  db.run('PRAGMA foreign_keys = ON;');
   // WAL still allows only one writer at a time; wait instead of throwing SQLITE_BUSY.
-  db.run("PRAGMA busy_timeout = 5000;");
+  db.run('PRAGMA busy_timeout = 5000;');
 
   migrate(db);
 
@@ -102,14 +118,12 @@ function migrate(db: Database): void {
       );
     `);
 
-    db.run("CREATE INDEX IF NOT EXISTS session_userId_idx ON session(userId);");
-    db.run("CREATE INDEX IF NOT EXISTS account_userId_idx ON account(userId);");
+    db.run('CREATE INDEX IF NOT EXISTS session_userId_idx ON session(userId);');
+    db.run('CREATE INDEX IF NOT EXISTS account_userId_idx ON account(userId);');
     db.run(
-      "CREATE UNIQUE INDEX IF NOT EXISTS idx_account_issuer_account_id ON account(issuer, accountId);",
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_account_issuer_account_id ON account(issuer, accountId);',
     );
-    db.run(
-      "CREATE INDEX IF NOT EXISTS verification_identifier_idx ON verification(identifier);",
-    );
+    db.run('CREATE INDEX IF NOT EXISTS verification_identifier_idx ON verification(identifier);');
 
     // --- application tables (SPEC §5.1, §5.2) ---
     db.run(`
@@ -126,9 +140,9 @@ function migrate(db: Database): void {
       );
     `);
 
-    db.run("CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);");
-    db.run("CREATE INDEX IF NOT EXISTS idx_notes_public_slug ON notes(public_slug);");
-    db.run("CREATE INDEX IF NOT EXISTS idx_notes_is_public ON notes(is_public);");
+    db.run('CREATE INDEX IF NOT EXISTS idx_notes_user_id ON notes(user_id);');
+    db.run('CREATE INDEX IF NOT EXISTS idx_notes_public_slug ON notes(public_slug);');
+    db.run('CREATE INDEX IF NOT EXISTS idx_notes_is_public ON notes(is_public);');
   })();
 }
 
@@ -140,7 +154,7 @@ const globalForDb = globalThis as typeof globalThis & {
 
 export const db: Database = globalForDb.__appDb ?? createDb();
 
-if (process.env.NODE_ENV !== "production") {
+if (process.env.NODE_ENV !== 'production') {
   globalForDb.__appDb = db;
 }
 

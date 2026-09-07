@@ -1,14 +1,15 @@
 // Turns a stray client-component import of this module into a build error:
 // `auth` closes over the SQLite handle and BETTER_AUTH_SECRET.
-import "server-only";
+import 'server-only';
 
-import { betterAuth } from "better-auth";
-import { nextCookies } from "better-auth/next-js";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { cache } from "react";
+import { betterAuth } from 'better-auth';
+import { nextCookies } from 'better-auth/next-js';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { cache } from 'react';
 
-import { getDb } from "./db";
+import { getDb } from './db';
+import { authenticateUrl } from './redirects';
 
 /**
  * better-auth instance (SPEC §3.1, §7.1).
@@ -24,7 +25,7 @@ export const auth = betterAuth({
   database: getDb(),
 
   secret: process.env.BETTER_AUTH_SECRET,
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  baseURL: process.env.BETTER_AUTH_URL ?? 'http://localhost:3000',
 
   emailAndPassword: {
     enabled: true,
@@ -51,7 +52,7 @@ export const auth = betterAuth({
 });
 
 export type Session = typeof auth.$Infer.Session;
-export type User = Session["user"];
+export type User = Session['user'];
 
 /**
  * Returns the current session, or null when the request is unauthenticated.
@@ -86,7 +87,7 @@ export async function getCurrentUser(): Promise<User | null> {
  */
 export async function requireUser(path: string): Promise<User> {
   const user = await getCurrentUser();
-  if (!user) redirect(`/authenticate?next=${encodeURIComponent(path)}`);
+  if (!user) redirect(authenticateUrl(path));
   return user;
 }
 
@@ -100,5 +101,5 @@ export async function requireUser(path: string): Promise<User> {
  */
 export async function requireApiUser(): Promise<User | Response> {
   const user = await getCurrentUser();
-  return user ?? Response.json({ error: "Unauthorized" }, { status: 401 });
+  return user ?? Response.json({ error: 'Unauthorized' }, { status: 401 });
 }

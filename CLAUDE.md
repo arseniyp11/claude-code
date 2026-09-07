@@ -32,7 +32,7 @@ There is no test suite configured yet.
 This will be a Next.js App Router note-taking app with rich-text editing (TipTap) and public link sharing, built on:
 
 - **Runtime:** Bun, for both dev and production
-- **Database:** a single SQLite file (`data/app.db`) accessed via Bun's built-in SQLite client using raw SQL (no ORM) — a `lib/db.ts` module exposes `getDb()` plus `query`/`get`/`run` helpers
+- **Database:** a single SQLite file — `data/app.db` by default, overridable with the `DB_PATH` env var (relative paths resolve from the project root) — accessed via Bun's built-in SQLite client using raw SQL (no ORM); a `lib/db.ts` module exposes `getDb()` plus `query`/`get`/`run` helpers
 - **Auth:** `better-auth`, configured with `account: { identityStrategy: "provider-id" }` so the `account.issuer` column is populated deterministically. better-auth owns the `user`, `session`, `account`, and `verification` tables; use its CLI (`npx @better-auth/cli generate`/`migrate`) to keep them in sync with the actual auth config rather than hand-editing schema
 - **Data layer:** `lib/notes.ts` holds note repository functions (`createNote`, `getNoteById`, `getNotesByUser`, `updateNote`, `deleteNote`, `setNotePublic`, `getNoteByPublicSlug`); every function scopes its query by `user_id` except the public-slug lookup, to keep cross-user access impossible at the data layer rather than relying on API-layer checks alone
 - **API layer:** REST-like Route Handlers under `app/api/notes/...` (list/create, get/update/delete by id, share toggle) plus a public read path for `/p/[slug]`; all authenticated routes return 401 via a shared `getCurrentUser()`/`getSession()` helper rather than duplicating auth checks per-route
