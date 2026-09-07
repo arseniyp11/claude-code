@@ -50,3 +50,33 @@ functionally present in the codebase — worth an audit pass rather than
 re-implementing): the E2E auth/notes/sharing/responsive spec files now that
 the harness exists, or a straight verification sweep of the "database"/
 "auth"/"ui" tasks against the already-built lib/, components/, app/ trees.
+
+2026-09-07 — Create SQLite database with better-auth schema (category: database)
+
+Audited rather than re-implemented: data/app.db already has all four
+better-auth tables (user, session, account with issuer column + the
+idx_account_issuer_account_id unique index, verification) plus notes,
+created by lib/db.ts's own migrate() function. Confirmed structure directly
+against sqlite_master and it matches SPEC.MD §5.1 exactly.
+
+Note the deliberate deviation from CLAUDE.md's "use the CLI" guidance,
+documented in lib/db.ts: `bunx @better-auth/cli migrate` resolves its own
+bundled @better-auth/core rather than the installed 1.7.2, and that copy
+generates an `account` table with no `issuer` column, which breaks sign-up
+at runtime. The hand-written DDL in lib/db.ts was verified instead against
+`getAuthTables(auth.options)` (the actual runtime schema better-auth
+expects), and lib/auth.ts documents why `identityStrategy: "provider-id"`
+from SPEC §5.1 is omitted (option doesn't exist in 1.7.2; the issuer format
+it would have configured is already the version's default behavior).
+
+Verified: bun run build, bun run lint, bun run test (136 passed), and
+bun run test:e2e (2 passed) all green. build required
+dangerouslyDisableSandbox — Turbopack's PostCSS transform spawns a worker
+process that binds a local port, which the default sandbox blocks; this is
+a known sandbox interaction, not a code issue.
+
+Next candidates: task 2 ("Create notes table with indexes") is verified by
+the same schema dump and DDL and should be a quick confirm-and-mark next.
+lib/db.ts, lib/auth.ts, lib/notes.ts also look complete against SPEC — worth
+auditing the remaining "database" and "auth" category tasks before assuming
+any UI work is next.
