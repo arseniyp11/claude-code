@@ -1,6 +1,40 @@
 Ralph progress log
 ===================
 
+2026-09-07 — Implement note sharing functions (category: database)
+
+Audited rather than re-implemented. lib/notes.ts:154-189's setNotePublic()
+and getNoteByPublicSlug() already cover every step: enabling sharing uses
+COALESCE(public_slug, ?) so an already-issued slug stays stable across
+re-shares rather than rotating and breaking handed-out links; disabling
+sets is_public = 0 and public_slug = NULL; both branches scope
+`WHERE id = ? AND user_id = ?` so a cross-user call returns null.
+getNoteByPublicSlug() has no userId param by design (SPEC §6.2) and folds
+`is_public = 1` directly into the WHERE clause so a disabled note is
+indistinguishable from a missing one. generatePublicSlug() wraps nanoid()
+(21 chars, clears SPEC §11's 16+ char minimum). test/lib/notes.test.ts's
+describe('setNotePublic', ...) and describe('getNoteByPublicSlug', ...)
+blocks already cover: enabling generates a slug, re-enabling keeps the same
+slug, disabling clears it, re-enabling after disabling issues a new slug,
+cross-user calls are rejected, a shared note is fetchable by slug, an
+unshared note's old slug 404s, and a nonexistent slug returns null.
+
+This closes out the entire "database" category — every task in it now
+passes=true.
+
+Verified: bun run lint, bun run test (136 passed), bun run build (needed
+dangerouslyDisableSandbox — Turbopack/PostCSS worker port binding, same
+known sandbox interaction as prior rounds, not a code issue), and
+bun run test:e2e (2 passed) all green. No UI surface changed, so no
+Playwright MCP check.
+
+Next candidates: "auth" is next in dependency order before UI tasks —
+lib/auth.ts, the API route, server helpers, and lib/auth-client.ts all
+appear to already exist in the tree per earlier rounds' notes (referenced
+repeatedly as "next" without ever actually being audited), so the next
+round should do a real audit of those four auth tasks rather than deferring
+again.
+
 2026-09-07 — Implement deleteNote function (category: database)
 
 Audited rather than re-implemented. lib/notes.ts:147-149's deleteNote()
