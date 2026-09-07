@@ -45,6 +45,11 @@ const COLUMNS = 'id, user_id, title, content_json, is_public, public_slug, creat
 
 export const DEFAULT_TITLE = 'Untitled note';
 
+/** Public slug for `/p/[slug]`. nanoid's default (21 chars) clears SPEC §11's 16+ char minimum. */
+export function generatePublicSlug(): string {
+  return nanoid();
+}
+
 function toNote(row: NoteRow): Note {
   return {
     id: row.id,
@@ -168,7 +173,7 @@ export async function setNotePublic(
          updated_at = datetime('now')
      WHERE id = ? AND user_id = ?
      RETURNING ${COLUMNS}`,
-    [nanoid(), noteId, userId],
+    [generatePublicSlug(), noteId, userId],
   );
 
   return row ? toNote(row) : null;

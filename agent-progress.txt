@@ -142,3 +142,34 @@ Next candidates: lib/notes.ts (task 4) is next in the same file/dependency
 chain and is effectively already verified above. After the "database"
 category is fully audited, "auth" (lib/auth.ts, the API route, server
 helpers, auth-client.ts) is next before UI tasks.
+
+2026-09-07 — Define Note type and create helper functions (lib/notes.ts) (category: database)
+
+lib/notes.ts had every step done except one, called out explicitly in the
+prior round's notes: no standalone exported `generatePublicSlug()`, just an
+inline `nanoid()` call inside setNotePublic(). Added the missing piece:
+
+- Exported `generatePublicSlug()` in lib/notes.ts, wrapping nanoid() (default
+  21 chars, clears SPEC §11's 16+ char minimum).
+- Swapped setNotePublic()'s inline `nanoid()` call for the new function so
+  there's a single named source of truth, matching the task's literal ask
+  and giving repository functions 5-9 (createNote etc., all already
+  implemented in this file) one less loose end when they're audited next.
+
+Everything else in the task was already correct: Note type (camelCase),
+toNote() row-mapper, DEFAULT_TITLE, and EMPTY_DOC (lib/tiptap.ts) all match
+SPEC §6.2 and were left untouched.
+
+Verified: bun run lint, bun run test (136 passed), bun run build (needed
+dangerouslyDisableSandbox — Turbopack/PostCSS worker port binding, same known
+sandbox interaction as prior rounds, not a code issue), and bun run test:e2e
+(2 passed) all green. No UI surface changed, so no Playwright MCP manual
+check — the automated e2e suite (real Chromium via Playwright) already
+exercises the app end to end.
+
+Next candidates: tasks 5-9 (createNote, getNoteById/getNotesByUser,
+updateNote, deleteNote, setNotePublic — all in lib/notes.ts) are now fully
+implemented and match SPEC.MD §6.2 exactly per this and prior audits; each
+should be a quick confirm-and-mark. After "database" is fully audited,
+"auth" (lib/auth.ts, the API route, server helpers, auth-client.ts) is next
+before UI tasks.
