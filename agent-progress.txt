@@ -103,3 +103,42 @@ Next candidates: lib/db.ts (getDb/query/get/run utilities) and lib/notes.ts
 audit-and-mark pattern likely applies. After that, the "auth" category
 (lib/auth.ts, the API route, server helpers, auth-client.ts) is next in
 dependency order before touching UI tasks.
+
+2026-09-07 — Build database access utilities (lib/db.ts) (category: database)
+
+Audited rather than re-implemented. lib/db.ts already has everything SPEC
+§6.1 asks for: a Bun SQLite connection opened against DB_PATH, a
+globalThis-cached singleton so Next's dev-mode module reloads don't leak
+connections or re-run pragmas, and query<T>()/get<T>()/run() wrappers around
+db.query(...).all()/.get()/db.run(). getDb() returns the singleton directly.
+
+"Test utilities with sample queries" is covered indirectly but thoroughly:
+test/lib/notes.test.ts exercises get/query/run through every notes
+repository function (createNote's RETURNING-based get, getNotesByUser's
+query, deleteNote's run, etc.) against a real on-disk SQLite db, including
+foreign-key enforcement and cross-user isolation. No dedicated
+test/lib/db.test.ts exists, but the behavior it would check is already
+covered end-to-end elsewhere, so no test gap in practice — noting this in
+case task 40 ("Write unit tests for database utilities", __tests__/lib/
+db.test.ts) still expects a dedicated file with unit-level assertions like
+"query<T>() with sample data" in isolation from lib/notes.ts.
+
+Also reviewed lib/notes.ts (task 4) while here: Note type, toNote row
+mapper, DEFAULT_TITLE, and EMPTY_DOC (in lib/tiptap.ts) all exist and match
+spec. One deviation from the task's literal steps: there's no standalone
+exported `generatePublicSlug()` — setNotePublic() calls `nanoid()` inline
+instead. Functionally equivalent (nanoid's default length is 21, well over
+the 16+ char requirement) and every repository function task (5/6/7/8)
+already depends on this file, so left as-is rather than adding an
+abstraction with a single call site. Did not mark task 4 done this round —
+only claiming the one task per instructions.
+
+Verified: bun run lint, bun run test (136 passed), bun run build (needs
+dangerouslyDisableSandbox — Turbopack/PostCSS worker port binding, same
+known sandbox interaction as before, not a code issue), and bun run test:e2e
+(2 passed) all green.
+
+Next candidates: lib/notes.ts (task 4) is next in the same file/dependency
+chain and is effectively already verified above. After the "database"
+category is fully audited, "auth" (lib/auth.ts, the API route, server
+helpers, auth-client.ts) is next before UI tasks.
