@@ -80,3 +80,26 @@ the same schema dump and DDL and should be a quick confirm-and-mark next.
 lib/db.ts, lib/auth.ts, lib/notes.ts also look complete against SPEC — worth
 auditing the remaining "database" and "auth" category tasks before assuming
 any UI work is next.
+
+2026-09-07 — Create notes table with indexes (category: database)
+
+Audited rather than re-implemented. Queried sqlite_master on data/app.db
+directly (bun -e with dangerouslyDisableSandbox — WAL mode needs write
+access to -shm/-wal files, which the default sandbox blocks even for a
+read-only query): the notes table has all 8 columns (id, user_id, title,
+content_json, is_public, public_slug, created_at, updated_at), the
+FOREIGN KEY on user_id, the UNIQUE constraint on public_slug, and all
+three indexes (idx_notes_user_id, idx_notes_public_slug,
+idx_notes_is_public) — exact match to SPEC.MD §5.1/§5.2. Confirmed the
+live schema traces back to the CREATE TABLE/INDEX statements in
+lib/db.ts:130-145 (migrate()), not a stale leftover.
+
+Verified: bun run build, bun run lint, bun run test (136 passed), and
+bun run test:e2e (2 passed) all green.
+
+Next candidates: lib/db.ts (getDb/query/get/run utilities) and lib/notes.ts
+(Note type, generatePublicSlug, repository functions) are the remaining
+"database" category tasks and all look complete on inspection — same
+audit-and-mark pattern likely applies. After that, the "auth" category
+(lib/auth.ts, the API route, server helpers, auth-client.ts) is next in
+dependency order before touching UI tasks.
