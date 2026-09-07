@@ -173,3 +173,26 @@ implemented and match SPEC.MD §6.2 exactly per this and prior audits; each
 should be a quick confirm-and-mark. After "database" is fully audited,
 "auth" (lib/auth.ts, the API route, server helpers, auth-client.ts) is next
 before UI tasks.
+
+2026-09-07 — Implement createNote repository function (category: database)
+
+Audited rather than re-implemented. lib/notes.ts:72-93's createNote() already
+covers every step: crypto.randomUUID() for the id, DEFAULT_TITLE fallback,
+EMPTY_DOC (JSON.stringify'd) fallback for contentJson, a single
+INSERT ... RETURNING scoped by user_id, mapped back to a Note via toNote().
+test/lib/notes.test.ts's `describe('createNote', ...)` block already covers
+defaults, explicit title/content, and downstream authorization (created notes
+are fetchable via getNoteById/getNotesByUser with correct user scoping).
+
+Verified: bun run lint, bun run test (136 passed), bun run build (needed
+dangerouslyDisableSandbox — Turbopack/PostCSS worker port binding, same known
+sandbox interaction as prior rounds, not a code issue), and bun run test:e2e
+(2 passed) all green. No UI surface changed, so no Playwright MCP check.
+
+Next candidates: tasks 6-9 (getNoteById/getNotesByUser, updateNote,
+deleteNote, setNotePublic) are all implemented in lib/notes.ts per this and
+prior audits — same confirm-and-mark pattern applies. Note deleteNote
+(lib/notes.ts:147-149) currently returns void, but task 8's steps ask for a
+boolean success return — worth resolving when that task is picked up (either
+have it return whether a row was actually deleted, or update the task to
+match the spec-literal signature in SPEC.MD §6.2, which also specifies void).
