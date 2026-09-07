@@ -1,0 +1,52 @@
+Ralph progress log
+===================
+
+2026-09-07 — Set up Playwright for E2E testing (category: testing)
+
+Found the codebase already substantially built (db/auth/notes layers, all
+pages, components, and a full Vitest unit suite — 136 tests passing) despite
+prd.json listing every task as passes=false. The clearest actual gap was E2E
+test infrastructure: no @playwright/test, no playwright.config.ts, no e2e/
+directory.
+
+What was added:
+- Installed @playwright/test (devDependency) and the Chromium browser.
+- playwright.config.ts: testDir 'e2e', chromium project, webServer config
+  that runs a dedicated `next dev` on port 3100 against a dedicated DB
+  (data/e2e-test.db) and BETTER_AUTH_URL, isolated from a developer's own
+  `bun dev` on the default port/DB_PATH.
+- next.config.ts: distDir switches to '.next-e2e' when E2E=1, so the
+  Playwright-spawned dev server doesn't fight a running `bun dev` for
+  .next/dev/lock (both are literally `next dev`, and Next takes the same
+  lock file regardless of port).
+- e2e/constants.ts: shared E2E_PORT/E2E_BASE_URL/E2E_DB_PATH, kept out of
+  playwright.config.ts itself — e2e/setup.ts needs these too, and importing
+  them from the config file caused a circular-import build error.
+- e2e/setup.ts: deletes any stale e2e-test.db (+ -wal/-shm) before a run.
+  Run as a plain script chained into webServer.command (`bun run
+  e2e/setup.ts && next dev ...`), NOT wired through Playwright's
+  `globalSetup` option — Bun's bundler, when Playwright loads a TS
+  globalSetup file, eagerly resolves playwright-core's optional lazy
+  requires (chromium-bidi) and fails with "AggregateError: 3 errors
+  building". Running the same file as an ordinary script sidesteps that
+  Bun/Playwright incompatibility entirely.
+- e2e/helpers/auth.ts: randomCredentials(), signUp(page, creds, next?),
+  login(page, creds, next?) — drive the real /authenticate UI.
+- e2e/smoke.spec.ts: two tests (landing page loads; sign-up lands on
+  /dashboard) to prove the harness works end to end. Deeper auth/notes/
+  sharing coverage is explicitly a separate prd.json task, left for later.
+- eslint.config.mjs: added '.next-e2e/**' to globalIgnores (it was getting
+  linted otherwise — eslint-config-next only ignores '.next/**').
+- package.json: added "test:e2e": "playwright test".
+- tsconfig.json / .gitignore: picked up Next's auto-added
+  '.next-e2e/types/**' include entries and Playwright's report/result dirs.
+
+Verified: bun run build, bun run lint, bun run test (136 passed), and
+bun run test:e2e (2 passed) all green, run twice in a row to confirm no
+leftover-process/port issues between runs.
+
+Next best candidates (per prd.json, all still passes=false despite being
+functionally present in the codebase — worth an audit pass rather than
+re-implementing): the E2E auth/notes/sharing/responsive spec files now that
+the harness exists, or a straight verification sweep of the "database"/
+"auth"/"ui" tasks against the already-built lib/, components/, app/ trees.
