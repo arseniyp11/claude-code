@@ -1,6 +1,37 @@
 Ralph progress log
 ===================
 
+2026-09-07 — Implement updateNote function (category: database)
+
+Audited rather than re-implemented. lib/notes.ts:113-145's updateNote()
+already covers every step: accepts partial { title?, contentJson? }, builds
+the SET list only from keys actually present (so passing just `title` can't
+blank `contentJson` via an undefined param), always appends
+`updated_at = datetime('now')`, and scopes `WHERE id = ? AND user_id = ?`
+with RETURNING so cross-user calls and misses both return null. Calling
+with an empty object short-circuits to getNoteById() rather than issuing a
+no-op UPDATE. test/lib/notes.test.ts's describe('updateNote', ...) already
+covers: partial-field update, updated_at advancing, no-fields no-op,
+cross-user note returns null and leaves the row unchanged, and nonexistent
+note returns null.
+
+Verified: bun run lint, bun run test (136 passed), bun run build (needed
+dangerouslyDisableSandbox — Turbopack/PostCSS worker port binding, same
+known sandbox interaction as prior rounds, not a code issue), and
+bun run test:e2e (2 passed) all green. No UI surface changed, so no
+Playwright MCP check.
+
+Next candidates: task 8 (deleteNote) and task 9 (setNotePublic +
+getNoteByPublicSlug) are both implemented in lib/notes.ts per this and prior
+audits — same confirm-and-mark pattern applies. Per the note in the
+"Implement createNote" round, deleteNote (lib/notes.ts:147-149) returns void
+per SPEC.MD §6.2's literal signature, not the boolean the task's steps ask
+for — SPEC is authoritative, so this is not a defect, just worth confirming
+test/lib/notes.test.ts asserts deletion + authorization behavior rather than
+a return value when that task is picked up. After "database" is fully
+audited, "auth" (lib/auth.ts, the API route, server helpers,
+auth-client.ts) is next before UI tasks.
+
 2026-09-07 — Set up Playwright for E2E testing (category: testing)
 
 Found the codebase already substantially built (db/auth/notes layers, all
