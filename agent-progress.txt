@@ -196,3 +196,24 @@ prior audits — same confirm-and-mark pattern applies. Note deleteNote
 boolean success return — worth resolving when that task is picked up (either
 have it return whether a row was actually deleted, or update the task to
 match the spec-literal signature in SPEC.MD §6.2, which also specifies void).
+
+2026-09-07 — Implement getNoteById and getNotesByUser functions (category: database)
+
+Audited rather than re-implemented. lib/notes.ts:95-111 already covers every
+step: getNoteById() scopes `WHERE id = ? AND user_id = ?` (cross-user lookups
+return null, matching SPEC §6.2's user_id-scoped authorization model), and
+getNotesByUser() queries `WHERE user_id = ? ORDER BY updated_at DESC`.
+test/lib/notes.test.ts's describe blocks for both functions already cover:
+owned note fetch, cross-user note returns null (authorization enforced),
+nonexistent id returns null, multi-note listing scoped to the right user, and
+empty array for a user with no notes.
+
+Verified: bun run lint, bun run test (136 passed), bun run build (needed
+dangerouslyDisableSandbox — Turbopack/PostCSS worker port binding, same known
+sandbox interaction as prior rounds, not a code issue), and bun run test:e2e
+(2 passed) all green. No UI surface changed, so no Playwright MCP check.
+
+Next candidates: tasks 7-9 (updateNote, deleteNote, setNotePublic +
+getNoteByPublicSlug) are all implemented in lib/notes.ts per this and prior
+audits — same confirm-and-mark pattern applies. Same deleteNote void-vs-bool
+return note from the prior round still applies to task 8 when it's picked up.
