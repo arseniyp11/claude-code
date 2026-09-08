@@ -3,6 +3,7 @@ import Link from 'next/link';
 
 import { primaryButtonClass } from '@/components/form-styles';
 import { NoteList } from '@/components/note-list';
+import { PageContainer } from '@/components/page-container';
 import { requireUser } from '@/lib/auth';
 import { getNotesByUser } from '@/lib/notes';
 
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
   const notes = await getNotesByUser(user.id);
 
   return (
-    <div className='mx-auto w-full max-w-3xl p-6'>
+    <PageContainer>
       <div className='flex flex-wrap items-center justify-between gap-4'>
         <div>
           <h1 className='text-2xl font-semibold tracking-tight'>Dashboard</h1>
@@ -39,6 +40,6 @@ export default async function DashboardPage() {
           isPublic,
         }))}
       />
-    </div>
+    </PageContainer>
   );
 }
