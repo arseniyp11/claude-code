@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 
+import { PageContainer } from '@/components/page-container';
 import { requireUser } from '@/lib/auth';
 
 import { NewNoteForm } from './new-note-form';
@@ -14,7 +15,7 @@ export default async function NewNotePage() {
   await requireUser('/notes/new');
 
   return (
-    <div className='mx-auto w-full max-w-3xl p-6'>
+    <PageContainer>
       <h1 className='text-2xl font-semibold tracking-tight'>New note</h1>
       <p className='mt-2 text-sm text-muted'>
         Give it a title and start writing. You can share it now or later.
@@ -23,6 +24,6 @@ export default async function NewNotePage() {
       <div className='mt-8'>
         <NewNoteForm />
       </div>
-    </div>
+    </PageContainer>
   );
 }

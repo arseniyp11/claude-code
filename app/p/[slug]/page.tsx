@@ -4,6 +4,7 @@ import { cache } from 'react';
 
 import { alertClass, hintClass } from '@/components/form-styles';
 import { NoteContent } from '@/components/note-content';
+import { PageContainer } from '@/components/page-container';
 import { formatNoteDate, sqliteUtcToDate } from '@/lib/dates';
 import { getNoteByPublicSlug } from '@/lib/notes';
 import { parseDocument } from '@/lib/tiptap-schema';
@@ -51,7 +52,7 @@ export default async function PublicNotePage({ params }: PublicNotePageProps) {
   // and `user_id` stay on the server: neither tells a reader anything they are
   // entitled to, and the id would hand them a URL to try against /notes/[id].
   return (
-    <div className='mx-auto w-full max-w-3xl p-6'>
+    <PageContainer>
       <h1 className='text-2xl font-semibold tracking-tight'>{note.title}</h1>
       {updatedAt && (
         <time dateTime={updatedAt.toISOString()} className={`mt-2 block ${hintClass}`}>
@@ -72,6 +73,6 @@ export default async function PublicNotePage({ params }: PublicNotePageProps) {
       <p className={`mt-12 border-t border-border pt-4 ${hintClass}`}>
         Shared read-only via NextNotes.
       </p>
-    </div>
+    </PageContainer>
   );
 }

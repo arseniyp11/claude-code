@@ -10,6 +10,7 @@ import {
   secondaryLinkClass,
 } from '@/components/form-styles';
 import { NoteContent } from '@/components/note-content';
+import { PageContainer } from '@/components/page-container';
 import { ShareToggle } from '@/components/share-toggle';
 import { requireUser } from '@/lib/auth';
 import { formatNoteDate, sqliteUtcToDate } from '@/lib/dates';
@@ -54,7 +55,7 @@ export default async function NotePage({ params }: NotePageProps) {
   const updatedAt = sqliteUtcToDate(note.updatedAt);
 
   return (
-    <div className='mx-auto w-full max-w-3xl p-6'>
+    <PageContainer>
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div>
           <h1 className='text-2xl font-semibold tracking-tight'>{note.title}</h1>
@@ -91,6 +92,6 @@ export default async function NotePage({ params }: NotePageProps) {
           </p>
         )}
       </div>
-    </div>
+    </PageContainer>
   );
 }

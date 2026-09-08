@@ -2,6 +2,7 @@ import type { JSONContent } from '@tiptap/react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
+import { PageContainer } from '@/components/page-container';
 import { ShareToggle } from '@/components/share-toggle';
 import { requireUser } from '@/lib/auth';
 import { getNoteById } from '@/lib/notes';
@@ -43,7 +44,7 @@ export default async function EditNotePage({ params }: NotePageProps) {
   const content = (parsed ?? EMPTY_DOC) as JSONContent;
 
   return (
-    <div className='mx-auto w-full max-w-3xl p-6'>
+    <PageContainer>
       <h1 className='text-2xl font-semibold tracking-tight'>Edit note</h1>
       <p className='mt-2 text-sm text-muted'>Changes are saved when you choose Save changes.</p>
 
@@ -64,6 +65,6 @@ export default async function EditNotePage({ params }: NotePageProps) {
           }}
         />
       </div>
-    </div>
+    </PageContainer>
   );
 }
